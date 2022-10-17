@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFrameworks>netstandard2.1;netstandard2.0;netframework4.5;netcoreapp3.1;net5.0;net6.0</TargetFrameworks>
+		<PackageId>OpenDeepSpace.Npoi</PackageId>
+		<Version>1.1.3</Version>
+		<Authors>OpenDeepSpace</Authors>
+		<Company>OpenDeepSpaceTech</Company>
+		<Product>OpenDeepSpaceNpoi</Product>
+		<Description>Import and export data to Excel using features and Excel templates based on Npoi</Description>
+		<Copyright>MIT</Copyright>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="NPOI" Version="2.5.6" />
+	</ItemGroup>
+
+</Project>
