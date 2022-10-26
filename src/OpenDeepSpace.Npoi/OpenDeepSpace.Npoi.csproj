@@ -3,7 +3,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>netstandard2.1;netstandard2.0;netframework4.5;netcoreapp3.1;net5.0;net6.0</TargetFrameworks>
 		<PackageId>OpenDeepSpace.Npoi</PackageId>
-		<Version>1.1.4</Version>
+		<Version>1.1.5</Version>
 		<Authors>OpenDeepSpace</Authors>
 		<Company>OpenDeepSpaceTech</Company>
 		<Product>OpenDeepSpaceNpoi</Product>
