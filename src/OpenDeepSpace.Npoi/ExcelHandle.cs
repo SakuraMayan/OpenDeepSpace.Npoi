@@ -1653,6 +1653,9 @@ namespace OpenDeepSpace.Npoi
 
 						propertyInfo = typeof(T).GetProperty(colIndexPropertyName);
 
+						//Cannot get a text value from a numeric cell
+						dataCell.SetCellType(CellType.String);
+
 						var data = dataCell.StringCellValue;
 						DataValidation(excelColumnProperty, data);
 
