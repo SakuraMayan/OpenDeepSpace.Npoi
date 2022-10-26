@@ -1388,7 +1388,7 @@ namespace OpenDeepSpace.Npoi
 			List<T> objs = exportExcelToObject<T>(excelStream, 0);
 
 			return objs;
-		}
+        }
 
 
 
@@ -1399,32 +1399,34 @@ namespace OpenDeepSpace.Npoi
 		/// <param name="colNameStartRow"></param>
 		/// <param name="notDataRowNum">如果获取的数据由问题可适当调整一下该值为负数 不是数据的行数 这里涉及到总行数减去非数据行数 这样来算出数据结束行</param>
 		/// <param name="sheetIndex"></param>
+		/// <param name = "IsAutoSkipNullRow" > 是否自动跳过空行 默认<see cref="true"/> 即跳过</param>
 		/// <returns></returns>
-		public List<T> exportExcelToObject<T>(string excelPath, int colNameStartRow, int notDataRowNum, int sheetIndex)
+		public List<T> exportExcelToObject<T>(string excelPath, int colNameStartRow, int notDataRowNum, int sheetIndex,bool IsAutoSkipNullRow=true)
 		{
 
 			List<T> objs = new List<T>();
 
-			handleExcelToObject(excelPath,colNameStartRow, notDataRowNum, sheetIndex, objs);
+			handleExcelToObject(excelPath,colNameStartRow, notDataRowNum, sheetIndex, objs,IsAutoSkipNullRow);
 
 
 			return objs;
 		}
 
-		/// <summary>
-		/// 导出Excel的数据到对象
-		/// </summary>
-		/// <param name="excelStream"></param>
-		/// <param name="colNameStartRow"></param>
-		/// <param name="notDataRowNum">如果获取的数据由问题可适当调整一下该值为负数</param>
-		/// <param name="sheetIndex"></param>
-		/// <returns></returns>
-		public List<T> exportExcelToObject<T>(Stream excelStream,  int colNameStartRow, int notDataRowNum, int sheetIndex)
+        /// <summary>
+        /// 导出Excel的数据到对象
+        /// </summary>
+        /// <param name="excelStream"></param>
+        /// <param name="colNameStartRow"></param>
+        /// <param name="notDataRowNum">如果获取的数据由问题可适当调整一下该值为负数</param>
+        /// <param name="sheetIndex"></param>
+        /// <param name="IsAutoSkipNullRow">是否自动跳过空行 默认<see cref="true"/>即跳过</param>
+        /// <returns></returns>
+        public List<T> exportExcelToObject<T>(Stream excelStream,  int colNameStartRow, int notDataRowNum, int sheetIndex,bool IsAutoSkipNullRow=true)
 		{
 
 			List<T> objs = new List<T>();
 
-			handleExcelToObject(excelStream,colNameStartRow, notDataRowNum, sheetIndex, objs);
+			handleExcelToObject(excelStream,colNameStartRow, notDataRowNum, sheetIndex, objs,IsAutoSkipNullRow);
 
 
 			return objs;
@@ -1472,9 +1474,10 @@ namespace OpenDeepSpace.Npoi
 		/// <param name="notDataRowNum">没有数据的行</param>
 		/// <param name="sheetIndex">工作表的下标</param>
 		/// <param name="objs">对象集合</param>
+		/// <param name="IsAutoSkipNullRow">是否自动跳过空行 默认<see cref="true"/>即跳过</param>
 		/// <exception cref="NpoiException"></exception>
 		private void handleExcelToObject<T>(string excelPath,int colNameStartRow, int notDataRowNum,
-				int sheetIndex, List<T> objs)
+				int sheetIndex, List<T> objs,bool IsAutoSkipNullRow=true)
 		{
 
 			IWorkbook wb = null;
@@ -1505,7 +1508,7 @@ namespace OpenDeepSpace.Npoi
 					if (colPropertyMaps.Count == 0) throw new NpoiException("读取列标识错误，请检查列标识开始行的位置");
 
 
-					readExcelData(colNameStartRow, notDataRowNum, objs, sheet, colPropertyMaps);
+					readExcelData(colNameStartRow, notDataRowNum, objs, sheet, colPropertyMaps,IsAutoSkipNullRow);
 
 
 				}
@@ -1529,16 +1532,17 @@ namespace OpenDeepSpace.Npoi
 			}
 		}
 
-		/// <summary>
-		/// 处理Excel的数据到对象
-		/// </summary>
-		/// <param name="colNameStartRow">列标识所在行</param>
-		/// <param name="notDataRowNum">没有数据的行</param>
-		/// <param name="sheetIndex">工作表的下标</param>
-		/// <param name="objs">对象集合</param>
-		/// <exception cref="NpoiException"></exception>
-		private void handleExcelToObject<T>(Stream excelStream,int colNameStartRow, int notDataRowNum,
-				int sheetIndex, List<T> objs)
+        /// <summary>
+        /// 处理Excel的数据到对象
+        /// </summary>
+        /// <param name="colNameStartRow">列标识所在行</param>
+        /// <param name="notDataRowNum">没有数据的行</param>
+        /// <param name="sheetIndex">工作表的下标</param>
+        /// <param name="objs">对象集合</param>
+        /// <param name="IsAutoSkipNullRow">是否自动跳过空行 默认<see cref="true"/>即跳过</param>
+        /// <exception cref="NpoiException"></exception>
+        private void handleExcelToObject<T>(Stream excelStream,int colNameStartRow, int notDataRowNum,
+				int sheetIndex, List<T> objs, bool IsAutoSkipNullRow = true)
 		{
 
 			IWorkbook wb = null;
@@ -1558,7 +1562,7 @@ namespace OpenDeepSpace.Npoi
 					if (colPropertyMaps.Count == 0) throw new NpoiException("读取列标识错误，请检查列标识开始行的位置");
 
 
-					readExcelData(colNameStartRow, notDataRowNum, objs, sheet, colPropertyMaps);
+					readExcelData(colNameStartRow, notDataRowNum, objs, sheet, colPropertyMaps,IsAutoSkipNullRow);
 
 
 
@@ -1588,24 +1592,35 @@ namespace OpenDeepSpace.Npoi
 		/// <param name="notDataRowNum"></param>
 		/// <param name="objs"></param>
 		/// <param name="sheet"></param>
+		/// <param name="IsAutoSkipNullRow"></param>
 		/// <param name="colPropertyMaps"></param>
 		private void readExcelData<T>( int colNameStartRow, int notDataRowNum, List<T> objs, ISheet sheet,
-				Dictionary<int, ExcelColumn> colPropertyMaps)
+				Dictionary<int, ExcelColumn> colPropertyMaps,bool IsAutoSkipNullRow=true)
 		{
-			//读取数据
-			T obj = (T)Activator.CreateInstance(typeof(T), true);
 
 			//这还有一点小问题 就是行数的判断 暂未解决 可以通过noDataRowNum来调整
 			for (int rowIndex = colNameStartRow + 1; rowIndex <= sheet.LastRowNum - notDataRowNum; rowIndex++)
 			{
+				//读取数据
+				T obj = (T)Activator.CreateInstance(typeof(T), true);
 
 				IRow dataRow = sheet.GetRow(rowIndex);
 
+				//一行空列计数
+				int nullColumn = 0;//默认为0
 
 				foreach (int colIndex in colPropertyMaps.Keys)
 				{
 
 					ICell dataCell = dataRow.GetCell(colIndex);
+
+					//空cell
+					if (dataCell == null)//自动跳过
+					{ 
+						nullColumn++;
+						continue;
+					}
+
 					CellType cellType = dataCell.CellType;
 
 					//记录方法的传入参数的类型
@@ -1691,6 +1706,9 @@ namespace OpenDeepSpace.Npoi
 
 
 				}
+
+				if (IsAutoSkipNullRow && colPropertyMaps.Keys.Count() == nullColumn)//自动跳过空行
+					continue;
 
 				objs.Add(obj);
 
