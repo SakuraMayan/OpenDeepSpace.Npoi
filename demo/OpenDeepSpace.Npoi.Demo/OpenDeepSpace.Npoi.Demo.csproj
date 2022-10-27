@@ -14,4 +14,10 @@
     <ProjectReference Include="..\..\src\OpenDeepSpace.Npoi\OpenDeepSpace.Npoi.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="ExcelDatas\外呼人员数据.xlsx">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>

@@ -1350,12 +1350,13 @@ namespace OpenDeepSpace.Npoi
 		/// </summary>
 		/// <param name="excelStream"></param>
 		/// <param name="sheetIndex">工作表下标</param>
+		/// <param name = "IsAutoSkipNullRow" > 是否自动跳过空行 默认<see cref="true"/> 即跳过</param>
 		/// <returns></returns>
-		public List<T> exportExcelToObject<T>(Stream excelStream, int sheetIndex)
+		public List<T> exportExcelToObject<T>(Stream excelStream, int sheetIndex,bool IsAutoSkipNullRow=true)
 		{
 
 
-			List<T> objs = exportExcelToObject<T>(excelStream, 0, 0, sheetIndex);
+			List<T> objs = exportExcelToObject<T>(excelStream, 0, 0, sheetIndex,IsAutoSkipNullRow);
 
 
 			return objs;
@@ -1381,11 +1382,12 @@ namespace OpenDeepSpace.Npoi
 		/// 只有一个sheet
 		/// </summary>
 		/// <param name="excelStream"></param>
+		/// <param name = "IsAutoSkipNullRow" > 是否自动跳过空行 默认<see cref="true"/> 即跳过</param>
 		/// <returns></returns>
-		public List<T> exportExcelToObject<T>(Stream excelStream)
+		public List<T> exportExcelToObject<T>(Stream excelStream,bool IsAutoSkipNullRow=true)
 		{
 
-			List<T> objs = exportExcelToObject<T>(excelStream, 0);
+			List<T> objs = exportExcelToObject<T>(excelStream, 0,IsAutoSkipNullRow);
 
 			return objs;
         }
@@ -1606,6 +1608,9 @@ namespace OpenDeepSpace.Npoi
 
 				IRow dataRow = sheet.GetRow(rowIndex);
 
+				if (dataRow == null)//行数据为空直接跳过
+					continue;
+
 				//一行空列计数
 				int nullColumn = 0;//默认为0
 
@@ -1615,13 +1620,18 @@ namespace OpenDeepSpace.Npoi
 					ICell dataCell = dataRow.GetCell(colIndex);
 
 					//空cell
-					if (dataCell == null)//自动跳过
+					if (dataCell == null)//自动跳过 
 					{ 
 						nullColumn++;
 						continue;
 					}
 
 					CellType cellType = dataCell.CellType;
+
+					if (cellType == CellType.Blank)//Blank如何处理？跳过 还是 继续判断验证
+					{ 
+						
+					}
 
 					//记录方法的传入参数的类型
 					Dictionary<string, Type> propertyParamTypeMaps = new Dictionary<string, Type>();

@@ -487,7 +487,7 @@ namespace OpenDeepSpace.Npoi.Demo.Controllers
         public void ExportExcelToObjectByStream(IFormFile formFile)
         {
             ExcelHandle ExcelHandle = new ExcelHandle();
-            var excelDatas = ExcelHandle.exportExcelToObject<ExcelDataOutDto>(formFile.OpenReadStream());
+            var excelDatas = ExcelHandle.exportExcelToObject<EmergencyWorkerInDto>(formFile.OpenReadStream());
         }
 
     }

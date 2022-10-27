@@ -2,7 +2,7 @@
 
 namespace OpenDeepSpace.Npoi.Demo
 {
-    public class NotNullAttribute : DataValidationAttribute
+    public class ColumnNotNullAttribute : DataValidationAttribute
     {
         public override DataValidationResult? IsValid(object data)
         {
