@@ -28,7 +28,17 @@ namespace OpenDeepSpace.Npoi.Demo.Controllers
                     { 
                         new ExcelRelationDataOutDto(){ Name="小张关联"},
                         new ExcelRelationDataOutDto(){ Name="小张关联"},
-                        new ExcelRelationDataOutDto(){ Name="小张关联3"}
+                        new ExcelRelationDataOutDto(){ 
+                            Name="小张关联3",
+
+                            //子数据的子数据
+                            RelationData =new List<ExcelRelationDataRelationOutDto>()
+                            { 
+                                new ExcelRelationDataRelationOutDto(){ Name="小张孙子数据"}
+                            }
+        
+                        },
+                        
                     }
                 },
                 new ExcelDataOutDto(){
@@ -46,7 +56,17 @@ namespace OpenDeepSpace.Npoi.Demo.Controllers
                     OtherInfo="面对疾风吧八八八",
                     ExcelRelationDataOutDtos=new List<ExcelRelationDataOutDto>()
                     {
-                        new ExcelRelationDataOutDto(){ Name="小李关联"}
+                        new ExcelRelationDataOutDto(){ 
+                            Name="小李关联",
+                            //子数据的子数据
+                            RelationData =new List<ExcelRelationDataRelationOutDto>()
+                            {
+                                new ExcelRelationDataRelationOutDto(){ Name="小李孙子数据"},
+                                new ExcelRelationDataRelationOutDto(){ Name="小李孙子数据"},
+                                new ExcelRelationDataRelationOutDto(){ Name="小李孙子数据2"}
+                            }
+
+                        }
                     }
                 },
                 /*new ExcelDataOutDto(){

@@ -803,107 +803,108 @@ namespace OpenDeepSpace.Npoi
 		/// <param name="colNames">可选列名集合</param>
 		/// <returns></returns>
 		private IWorkbook handleObjectToExcel<T>(List<T> objs, List<string> colNames)
-		{
+        {
 
-			IWorkbook wb = null;
+            IWorkbook wb = null;
 
-			if (isXSSF)
-			{
-
-				wb = new XSSFWorkbook();
-
-			}
-			else
-			{
-
-				wb = new HSSFWorkbook();
-			}
-
-			//考虑这里循环导出多个sheet 数据超过65535 考虑以65535分割或者提示异常
-
-			ISheet sheet = null;
-			//获取是否存在ExcelSheet特性
-			var excelSheetAttribute = typeof(T).GetCustomAttribute<ExcelSheetAttribute>();
-
-			//不为空并且SheetName不为空
-			if (excelSheetAttribute != null && !string.IsNullOrWhiteSpace(excelSheetAttribute.SheetName))
-			{
-				sheet = wb.CreateSheet(excelSheetAttribute.SheetName);
-			}
-			else
-			{ 
-				sheet = wb.CreateSheet();
-			
-			}
-
-			setExcelColName(sheet, typeof(T), colNames);
-
-			List<dynamic> list = new List<dynamic>();
-			foreach (T obj in objs)//数据转换为dynamic
-			{ 
-				list.Add(obj);	
-			}
-
-			setDatas(list,typeof(T),sheet, colNames);//ColNames考虑键值对 或顺序设置
-
-			//合并数据列
-			MergeDataCol(list,typeof(T),sheet, colNames);
-
-			//获取T中是否存在使用ExcelSheet标注的属性
-			var includeSheets = typeof(T).GetProperties().Where(p => p.GetCustomAttribute<ExcelSheetAttribute>() != null).ToList();
-			foreach (var includeSheet in includeSheets)
+            if (isXSSF)
             {
-				//获取属性包含的数据类型
+
+                wb = new XSSFWorkbook();
+
+            }
+            else
+            {
+
+                wb = new HSSFWorkbook();
+            }
+
+            //考虑这里循环导出多个sheet 数据超过65535 考虑以65535分割或者提示异常
+            List<dynamic> list = new List<dynamic>();
+            foreach (T obj in objs)//数据转换为dynamic
+            {
+                list.Add(obj);
+            }
+
+            //获取是否存在使用ExcelSheet标注的属性
+            RecursionFill(list, colNames, wb, typeof(T));
+
+            return wb;
+        }
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="objs"></param>
+		/// <param name="colNames"></param>
+		/// <param name="wb"></param>
+		/// <param name="dataType"></param>
+        private void RecursionFill(List<dynamic> objs, List<string> colNames, IWorkbook wb, Type dataType)
+        {
+
+			//自身填充
+			FillSheet(colNames, wb, objs, dataType);
+
+            var includeSheets = dataType.GetProperties().Where(p => p.GetCustomAttribute<ExcelSheetAttribute>() != null).ToList();
+            foreach (var includeSheet in includeSheets)
+            {
+                //获取属性包含的数据类型
                 Type singleDataType = GetDataType(includeSheet);
 
-                //获取 创建sheet
-                sheet = null;
-                //获取是否存在ExcelSheet特性
-                excelSheetAttribute = singleDataType.GetCustomAttribute<ExcelSheetAttribute>();
-
-                //不为空并且SheetName不为空
-                if (excelSheetAttribute != null && !string.IsNullOrWhiteSpace(excelSheetAttribute.SheetName))
-                {
-                    sheet = wb.CreateSheet(excelSheetAttribute.SheetName);
-                }
-                else
-                {
-                    sheet = wb.CreateSheet();
-
-                }
-
-
-                //设置Sheet的列名
-                setExcelColName(sheet, singleDataType, colNames);
-
-
-				//获取关联数据
-				List<dynamic> dynamics = new List<dynamic>();//动态数据
+                //获取关联数据
+                List<dynamic> dynamics = new List<dynamic>();//动态数据
                 foreach (var item in objs)
                 {
-					dynamic relationDatas = includeSheet.GetValue(item, null);
-					if(relationDatas != null)
-						dynamics.AddRange(relationDatas);
-				}
+                    dynamic relationDatas = includeSheet.GetValue(item, null);
+                    if (relationDatas != null)
+                        dynamics.AddRange(relationDatas);
+                }
 
-                //设置关联数据
-                setDatas(dynamics,singleDataType, sheet, colNames);
+                RecursionFill(dynamics, colNames, wb, singleDataType);
 
-                //合并数据列
-                MergeDataCol(dynamics,singleDataType,sheet, colNames);
-                
+
+            }
+        }
+
+        /// <summary>
+        /// 填充sheet
+        /// </summary>
+        /// <param name="colNames"></param>
+        /// <param name="wb"></param>
+        /// <param name="list"></param>
+        /// <param name="dataType"></param>
+        private void FillSheet(List<string> colNames, IWorkbook wb, List<dynamic> list, Type dataType)
+        {
+            ISheet sheet = null;
+            //获取是否存在ExcelSheet特性
+            ExcelSheetAttribute excelSheetAttribute = dataType.GetCustomAttribute<ExcelSheetAttribute>();
+
+            //不为空并且SheetName不为空
+            if (excelSheetAttribute != null && !string.IsNullOrWhiteSpace(excelSheetAttribute.SheetName))
+            {
+                sheet = wb.CreateSheet(excelSheetAttribute.SheetName);
+            }
+            else
+            {
+                sheet = wb.CreateSheet();
 
             }
 
+            //TODO: ColNames考虑键值对 或顺序设置 对不同关联数据导出的字段进行筛选
+            setExcelColName(sheet, dataType, colNames);
 
-            return wb;
-		}
 
-		/// <summary>
-		/// 获取数据类型
-		/// </summary>
-		/// <param name="includeSheet"></param>
-		/// <returns></returns>
+            setDatas(list, dataType, sheet, colNames);
+
+            //合并数据列
+            MergeDataCol(list, dataType, sheet, colNames);
+        }
+
+        /// <summary>
+        /// 获取数据类型
+        /// </summary>
+        /// <param name="includeSheet"></param>
+        /// <returns></returns>
         private static Type GetDataType(PropertyInfo includeSheet)
         {
             Type singleDataType = includeSheet.PropertyType;//数据的类型
