@@ -8,6 +8,7 @@ namespace OpenDeepSpace.Npoi.Demo
     /// <summary>
     /// 泛指ExcelData数据输出对象
     /// </summary>
+    [ExcelSheet(SheetName = "主数据")]
     public class ExcelDataOutDto
     {
 
@@ -40,5 +41,11 @@ namespace OpenDeepSpace.Npoi.Demo
         /// 其他信息
         /// </summary>
         public string OtherInfo { get; set; }
+
+        /// <summary>
+        /// 关联数据
+        /// </summary>
+        [ExcelSheet]
+        public List<ExcelRelationDataOutDto> ExcelRelationDataOutDtos { get; set; }
     }
 }

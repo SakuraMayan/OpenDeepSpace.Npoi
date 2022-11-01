@@ -821,96 +821,198 @@ namespace OpenDeepSpace.Npoi
 
 			//考虑这里循环导出多个sheet 数据超过65535 考虑以65535分割或者提示异常
 
-			ISheet sheet = wb.CreateSheet();
+			ISheet sheet = null;
+			//获取是否存在ExcelSheet特性
+			var excelSheetAttribute = typeof(T).GetCustomAttribute<ExcelSheetAttribute>();
+
+			//不为空并且SheetName不为空
+			if (excelSheetAttribute != null && !string.IsNullOrWhiteSpace(excelSheetAttribute.SheetName))
+			{
+				sheet = wb.CreateSheet(excelSheetAttribute.SheetName);
+			}
+			else
+			{ 
+				sheet = wb.CreateSheet();
+			
+			}
 
 			setExcelColName(sheet, typeof(T), colNames);
 
-			setDatas(objs,sheet, colNames);
+			List<dynamic> list = new List<dynamic>();
+			foreach (T obj in objs)//数据转换为dynamic
+			{ 
+				list.Add(obj);	
+			}
+
+			setDatas(list,typeof(T),sheet, colNames);//ColNames考虑键值对 或顺序设置
 
 			//合并数据列
-			MergeDataCol(objs,sheet, colNames);
+			MergeDataCol(list,typeof(T),sheet, colNames);
 
-			return wb;
+			//获取T中是否存在使用ExcelSheet标注的属性
+			var includeSheets = typeof(T).GetProperties().Where(p => p.GetCustomAttribute<ExcelSheetAttribute>() != null).ToList();
+			foreach (var includeSheet in includeSheets)
+            {
+				//获取属性包含的数据类型
+                Type singleDataType = GetDataType(includeSheet);
+
+                //获取 创建sheet
+                sheet = null;
+                //获取是否存在ExcelSheet特性
+                excelSheetAttribute = singleDataType.GetCustomAttribute<ExcelSheetAttribute>();
+
+                //不为空并且SheetName不为空
+                if (excelSheetAttribute != null && !string.IsNullOrWhiteSpace(excelSheetAttribute.SheetName))
+                {
+                    sheet = wb.CreateSheet(excelSheetAttribute.SheetName);
+                }
+                else
+                {
+                    sheet = wb.CreateSheet();
+
+                }
+
+
+                //设置Sheet的列名
+                setExcelColName(sheet, singleDataType, colNames);
+
+
+				//获取关联数据
+				List<dynamic> dynamics = new List<dynamic>();//动态数据
+                foreach (var item in objs)
+                {
+					dynamic relationDatas = includeSheet.GetValue(item, null);
+					if(relationDatas != null)
+						dynamics.AddRange(relationDatas);
+				}
+
+                //设置关联数据
+                setDatas(dynamics,singleDataType, sheet, colNames);
+
+                //合并数据列
+                MergeDataCol(dynamics,singleDataType,sheet, colNames);
+                
+
+            }
+
+
+            return wb;
 		}
 
 		/// <summary>
-		/// 不带模板的设置数据到单元格
+		/// 获取数据类型
 		/// </summary>
-		/// <param name="objs">对象集合</param>
-		/// <param name="sheet">单元格</param>
-		/// <param name="colNames">可选的列名集合</param>
-		private void setDatas<T>(List<T> objs, ISheet sheet, List<string> colNames)
-		{
-			IRow row = null;
+		/// <param name="includeSheet"></param>
+		/// <returns></returns>
+        private static Type GetDataType(PropertyInfo includeSheet)
+        {
+            Type singleDataType = includeSheet.PropertyType;//数据的类型
+                                                            //获取实际类型
+            if (singleDataType.IsGenericType)//如果是泛型
+            {
+                singleDataType = singleDataType.GetGenericArguments()[0];
+            }
+            else//如果是数组
+            {
+
+            }
+
+            return singleDataType;
+        }
+
+        /// <summary>
+        /// 不带模板的设置数据到单元格
+        /// </summary>
+        /// <param name="objs">对象集合</param>
+		/// <param name="dataType">数据类型</param>
+        /// <param name="sheet">单元格</param>
+        /// <param name="colNames">可选的列名集合</param>
+        private void setDatas(List<dynamic> objs,Type dataType, ISheet sheet, List<string> colNames)
+        {
+            IRow row = null;
+
+            List<ExcelColumn> excelColumns = GetDataExcelColumn(colNames, dataType);
+            excelColumns.Sort();//排序
+
+            //写数据
+            for (int i = 0; i < objs.Count; i++)
+            {
+
+                row = FillRowData(sheet, excelColumns, i, objs[i], dataType);
+                
+            }
 
 
-			List<ExcelColumn> excelColumns = null;
-			if (colNames != null && colNames.Count > 0)
-			{
-				excelColumns = getExcelColumns(typeof(T), colNames);
-			}
-			else
-			{
-				excelColumns = getExcelColumns(typeof(T));
-			}
-			excelColumns.Sort();//排序
-
-			//写数据
-			for (int i = 0; i < objs.Count; i++)
-			{
-
-				//创建一行
-				row = sheet.CreateRow(i + 1);
-
-				if (isSetOrder)
-				{//设置了序号列，每次每行的第一列设置序号
-
-					row.CreateCell(0).SetCellValue(i + 1);
-				}
-
-				for (int index = 0; index < excelColumns.Count; index++)
-				{
-					//创建列 并填充相应的数据
-					ICell cell = null;
-					if (isSetOrder)
-						cell = row.CreateCell(index + 1);
-					else
-						cell = row.CreateCell(index);
+        }
 
 
-					object data = typeof(T).GetProperty(excelColumns[index].PropertyName).GetValue(objs[i]);
 
-					DataValidation(excelColumns[index], data);
+        private List<ExcelColumn> GetDataExcelColumn(List<string> colNames,Type dataType)
+        {
+            List<ExcelColumn> excelColumns = null;
+            if (colNames != null && colNames.Count > 0)
+            {
+                excelColumns = getExcelColumns(dataType, colNames);
+            }
+            else
+            {
+                excelColumns = getExcelColumns(dataType);
+            }
 
-					dataInputCell(cell, excelColumns[index].PropertyType, data,excelColumns[index]);
-				}
+            return excelColumns;
+        }
 
-				
-			}
+        /// <summary>
+        /// 填充行数据
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <param name="excelColumns"></param>
+        /// <param name="i"></param>
+        /// <param name="obj"></param>
+        /// <param name="dataType"></param>
+        /// <returns></returns>
+        private IRow FillRowData(ISheet sheet, List<ExcelColumn> excelColumns, int i, object obj, Type dataType)
+        {
+            //创建一行
+            IRow row = sheet.CreateRow(i + 1);
+            if (isSetOrder)
+            {//设置了序号列，每次每行的第一列设置序号
 
-			
-		}
+                row.CreateCell(0).SetCellValue(i + 1);
+            }
+
+            for (int index = 0; index < excelColumns.Count; index++)
+            {
+                //创建列 并填充相应的数据
+                ICell cell = null;
+                if (isSetOrder)
+                    cell = row.CreateCell(index + 1);
+                else
+                    cell = row.CreateCell(index);
+
+
+                object data = dataType.GetProperty(excelColumns[index].PropertyName).GetValue(obj);
+
+                DataValidation(excelColumns[index], data);
+
+                dataInputCell(cell, excelColumns[index].PropertyType, data, excelColumns[index]);
+            }
+
+            return row;
+        }
 
 		/// <summary>
 		/// 合并数据列
 		/// </summary>
 		/// <param name="objs"></param>
+		/// <param name="dataType">数据类型</param>
 		/// <param name="sheet"></param>
 		/// <param name="colNames"></param>
-		private void MergeDataCol<T>(List<T> objs, ISheet sheet, List<string> colNames)
+		private void MergeDataCol(List<dynamic> objs,Type dataType, ISheet sheet, List<string> colNames)
 		{
 
-			List<ExcelColumn> excelColumns = null;
-			if (colNames != null && colNames.Count > 0)
-			{
-				excelColumns = getExcelColumns(typeof(T), colNames);
-			}
-			else
-			{
-				excelColumns = getExcelColumns(typeof(T));
-			}
+			List<ExcelColumn> excelColumns = GetDataExcelColumn(colNames, dataType);
 			excelColumns.Sort();//排序
-
 
 			//合并行列
 			//合并的序号开始下标
@@ -929,19 +1031,19 @@ namespace OpenDeepSpace.Npoi
 				excelColumns = excelColumns.Where(t => !t.IsBaselineCol).ToList();
 
 				//设置当前值 取第一个值为当前值
-				object currentValue = typeof(T).GetProperty(baseLineExcelColumn.PropertyName).GetValue(objs[0]);
+				object currentValue = dataType.GetProperty(baseLineExcelColumn.PropertyName).GetValue(objs[0]);
 
 				for (int j = 0; j < objs.Count; j++)
 				{
 
 					//根据反射获取数据
-					object tempValue = typeof(T).GetProperty(baseLineExcelColumn.PropertyName).GetValue(objs[j]);
+					object tempValue = dataType.GetProperty(baseLineExcelColumn.PropertyName).GetValue(objs[j]);
 
 					if (currentValue != tempValue || (currentValue == tempValue && j == objs.Count - 1))//如果当前值和获取出来的值不相同表示合并开始新的数据行 或者全部数据遍历完成
 					{
 						baseLineColEndRow = j + 1;//之前的结束列
-												  //如果存在大于一行的数据 或 只有一行差距已经是最后一行则可合并
-						if (baseLineColEndRow - baseLineColStartRow > 1 || (baseLineColEndRow - baseLineColStartRow == 1 && j == objs.Count - 1))
+												  //如果存在大于一行的数据
+						if (baseLineColEndRow - baseLineColStartRow > 1)
 						{ //存在需要合并的数据才合并
 
 							if (j != objs.Count - 1)//非最后一行 合并时的结束列需要减1
@@ -963,6 +1065,19 @@ namespace OpenDeepSpace.Npoi
 								sheet.AddMergedRegionUnsafe(new CellRangeAddress(baseLineColStartRow, baseLineColEndRow, otherExcelColumn.ColOrder, otherExcelColumn.ColOrder));
 							}
 						}
+						else 
+						if (baseLineColEndRow - baseLineColStartRow == 1)////如果只有一行差距 不需要合并
+						{
+							sheet.GetRow(baseLineColStartRow).GetCell(0).SetCellValue(orderIndex);
+
+							//如果已是最后一行数据
+							if (j == objs.Count - 1)//重置下标
+							{
+								sheet.GetRow(baseLineColStartRow+1).GetCell(0).SetCellValue(orderIndex+1);
+							}
+						}
+						
+						
 
 						//开始新的列
 						baseLineColStartRow = j + 1;//由于存在列名关系所以开始行+1

@@ -23,7 +23,13 @@ namespace OpenDeepSpace.Npoi.Demo.Controllers
                     Name="小张",
                     Age=20,
                     BirthDate=DateTime.Today.AddYears(-20),
-                    OtherInfo="我是小张，我不嚣张"
+                    OtherInfo="我是小张，我不嚣张",
+                    ExcelRelationDataOutDtos=new List<ExcelRelationDataOutDto>()
+                    { 
+                        new ExcelRelationDataOutDto(){ Name="小张关联"},
+                        new ExcelRelationDataOutDto(){ Name="小张关联"},
+                        new ExcelRelationDataOutDto(){ Name="小张关联3"}
+                    }
                 },
                 new ExcelDataOutDto(){
                     Id="b66f90b7-178b-11ed-98e5-00155d562808",
@@ -37,7 +43,11 @@ namespace OpenDeepSpace.Npoi.Demo.Controllers
                     Name="小李",
                     Age=24,
                     BirthDate=DateTime.Today.AddYears(-24),
-                    OtherInfo="面对疾风吧八八八"
+                    OtherInfo="面对疾风吧八八八",
+                    ExcelRelationDataOutDtos=new List<ExcelRelationDataOutDto>()
+                    {
+                        new ExcelRelationDataOutDto(){ Name="小李关联"}
+                    }
                 },
                 /*new ExcelDataOutDto(){
                     Id=Guid.NewGuid().ToString(),
@@ -51,7 +61,12 @@ namespace OpenDeepSpace.Npoi.Demo.Controllers
                     Name="小吴",
                     Age=27,
                     BirthDate=DateTime.Today.AddYears(-27),
-                    OtherInfo="哈哈哈笑而不语"
+                    OtherInfo="哈哈哈笑而不语",
+                    ExcelRelationDataOutDtos=new List<ExcelRelationDataOutDto>()
+                    {
+                        new ExcelRelationDataOutDto(){ Name="小吴关联"},
+                        new ExcelRelationDataOutDto(){ Name="小吴关联3"}
+                    }
                 },
                 new ExcelDataOutDto(){
                     Id="b66f90b7-178b-11ed-98e5-00155d5s2808",
