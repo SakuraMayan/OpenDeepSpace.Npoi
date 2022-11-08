@@ -11,7 +11,7 @@ namespace OpenDeepSpace.Npoi.Attributes
     public abstract class DataValidationAttribute:Attribute
     {
         /// <summary>
-        /// 错误信息
+        /// 错误信息 错误信息中可以通过增加{row}占位提示错误在某一行
         /// </summary>
         public string ErrorMessage { get; set; }
 

@@ -1207,7 +1207,7 @@ namespace OpenDeepSpace.Npoi
 		/// </summary>
 		/// <param name="ec"></param>
 		/// <exception cref="NpoiException"></exception>
-		private static void DataValidation(ExcelColumn ec, object data)
+		private static void DataValidation(ExcelColumn ec, object data,int rowIndex)
 		{
 			//数据验证
 			var dataValidationAttrs = ec.PropertyInfo.GetCustomAttributes().Where(t => t is DataValidationAttribute);
@@ -1217,18 +1217,29 @@ namespace OpenDeepSpace.Npoi
 				//调用数据验证
 				var dataValidationResult = (dataValidationAttr as DataValidationAttribute).IsValid(data);
 				if (dataValidationResult != null)
-					throw new NpoiException(dataValidationResult.ErrorMessage);
+					throw new NpoiException(rowIndex==-1?dataValidationResult.ErrorMessage:dataValidationResult.ErrorMessage.Replace("{row}",$"{rowIndex}"));
 			}
 			
         }
 
+		/// <summary>
+		/// 数据验证
+		/// </summary>
+		/// <param name="ec"></param>
+		/// <exception cref="NpoiException"></exception>
+		private static void DataValidation(ExcelColumn ec, object data)
+		{
+			DataValidation(ec, data, -1);
 
-        /// <summary>
-        /// 数据填充到带Excel模板的输出的Excel文件中
-        /// </summary>
-        /// <param name="typeClass"></param>
-        /// <param name="data"></param>
-        private void dataInputCell(Type typeClass, object data)
+		}
+
+
+		/// <summary>
+		/// 数据填充到带Excel模板的输出的Excel文件中
+		/// </summary>
+		/// <param name="typeClass"></param>
+		/// <param name="data"></param>
+		private void dataInputCell(Type typeClass, object data)
 		{
 
 
@@ -1623,8 +1634,6 @@ namespace OpenDeepSpace.Npoi
 
 					Dictionary<int, ExcelColumn> colPropertyMaps = getColProperty(sheet.GetRow(colNameStartRow), typeof(T));
 
-					if (colPropertyMaps.Count == 0) throw new NpoiException("读取列标识错误，请检查列标识开始行的位置");
-
 
 					readExcelData(colNameStartRow, notDataRowNum, objs, sheet, colPropertyMaps,IsAutoSkipNullRow);
 
@@ -1675,10 +1684,8 @@ namespace OpenDeepSpace.Npoi
 
 					ISheet sheet = wb.GetSheetAt(sheetIndex);
 
+
 					Dictionary<int, ExcelColumn> colPropertyMaps = getColProperty(sheet.GetRow(colNameStartRow), typeof(T));
-
-					if (colPropertyMaps.Count == 0) throw new NpoiException("读取列标识错误，请检查列标识开始行的位置");
-
 
 					readExcelData(colNameStartRow, notDataRowNum, objs, sheet, colPropertyMaps,IsAutoSkipNullRow);
 
@@ -1725,7 +1732,13 @@ namespace OpenDeepSpace.Npoi
 				IRow dataRow = sheet.GetRow(rowIndex);
 
 				if (dataRow == null)//行数据为空直接跳过
-					continue;
+				{
+					if (IsAutoSkipNullRow)//是自动跳过
+						continue;
+					else//不是自动跳过 判断第一个数据验证
+						DataValidation(colPropertyMaps[0], typeof(T).GetProperty(colPropertyMaps[0].PropertyName).GetValue(obj),rowIndex);
+				
+				}
 
 				//一行空列计数
 				int nullColumn = 0;//默认为0
@@ -1734,21 +1747,11 @@ namespace OpenDeepSpace.Npoi
 				{
 
 					ICell dataCell = dataRow.GetCell(colIndex);
-
-					//空cell
-					if (dataCell == null)//自动跳过 
-					{ 
-						nullColumn++;
-						continue;
-					}
-
-					CellType cellType = dataCell.CellType;
-
-					if (cellType == CellType.Blank)//Blank如何处理？跳过 还是 继续判断验证
-					{ 
-						
-					}
-
+					ExcelColumn excelColumnProperty;
+					string colIndexPropertyName;
+					colPropertyMaps.TryGetValue(colIndex, out excelColumnProperty);
+					colIndexPropertyName = excelColumnProperty.PropertyName;
+					Type paramTypeClass;
 					//记录方法的传入参数的类型
 					Dictionary<string, Type> propertyParamTypeMaps = new Dictionary<string, Type>();
 					foreach (PropertyInfo propertyinfo in typeof(T).GetProperties())
@@ -1758,13 +1761,29 @@ namespace OpenDeepSpace.Npoi
 
 
 					}
-
-					ExcelColumn excelColumnProperty;
-					string colIndexPropertyName;
-					colPropertyMaps.TryGetValue(colIndex, out excelColumnProperty);
-					colIndexPropertyName = excelColumnProperty.PropertyName;
-					Type paramTypeClass;
 					propertyParamTypeMaps.TryGetValue(colIndexPropertyName, out paramTypeClass);
+
+
+					//空cell
+					if (dataCell == null)//自动跳过 
+					{ 
+						nullColumn++;
+						//设置为自动跳过
+						if (!IsAutoSkipNullRow)
+						{ //不自动跳过就数据验证
+							DataValidation(excelColumnProperty,typeof(T).GetProperty(colIndexPropertyName).GetValue(obj),rowIndex);
+						}
+					}
+
+					CellType cellType = dataCell.CellType;
+
+					if (cellType == CellType.Blank)//Blank如何处理 有格式这些比如单元格填充色 但数据内容为空 ：跳过 还是 继续判断验证
+					{
+						nullColumn++;
+						
+					}
+
+
 
 
 					PropertyInfo propertyInfo = null;
@@ -1774,7 +1793,7 @@ namespace OpenDeepSpace.Npoi
 						propertyInfo = typeof(T).GetProperty(colIndexPropertyName);
 
 						var data = Convert.ToInt32(dataCell.NumericCellValue);
-						DataValidation(excelColumnProperty, data);
+						DataValidation(excelColumnProperty, data,rowIndex);
 
 						propertyInfo.SetValue(obj, Convert.ToInt32(data));
 					}
@@ -1784,7 +1803,7 @@ namespace OpenDeepSpace.Npoi
 						propertyInfo = typeof(T).GetProperty(colIndexPropertyName);
 
 						var data = dataCell.NumericCellValue;
-						DataValidation(excelColumnProperty, data);
+						DataValidation(excelColumnProperty, data,rowIndex);
 
 						propertyInfo.SetValue(obj, data);
 
@@ -1798,7 +1817,7 @@ namespace OpenDeepSpace.Npoi
 						dataCell.SetCellType(CellType.String);
 
 						var data = dataCell.StringCellValue;
-						DataValidation(excelColumnProperty, data);
+						DataValidation(excelColumnProperty, data,rowIndex);
 
 						propertyInfo.SetValue(obj, data);
 
@@ -1821,7 +1840,7 @@ namespace OpenDeepSpace.Npoi
 						finally
 						{
 
-							DataValidation(excelColumnProperty, date);
+							DataValidation(excelColumnProperty, date,rowIndex);
 
 						}
 
@@ -1857,11 +1876,13 @@ namespace OpenDeepSpace.Npoi
 			List<ExcelColumn> ecColumns = getExcelColumns(type);
 			ecColumns.Sort();
 
+			if (colIndentifierRow == null)
+				throw new NpoiException("列标识行为空");
+
 			foreach (ICell cell in colIndentifierRow)
 			{//遍历excel文件中的标题行
 
 				string cellColName = cell.StringCellValue.Trim();
-
 
 				foreach (ExcelColumn ec in ecColumns)
 				{//Excel中的列标识比对
@@ -1876,7 +1897,16 @@ namespace OpenDeepSpace.Npoi
 				}
 			}
 
+			//如果excel中的列名 缺少
+			if (maps.Count != ecColumns.Count)
+			{ 
+				var loseColumns = ecColumns.Where(t=>maps.Values.All(a=>a!=t));
 
+				throw new NpoiException($"Excel文件中缺少列名:{string.Join(",",loseColumns.Select(t=>t.ColName))}");
+			}
+
+			if(maps.Count==0)
+				throw new NpoiException("读取列标识错误，请检查列标识开始行的位置");
 
 			return maps;
 		}

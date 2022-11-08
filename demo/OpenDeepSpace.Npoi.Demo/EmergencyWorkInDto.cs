@@ -14,7 +14,7 @@ namespace OpenDeepSpace.Npoi.Demo
         /// <summary>
         /// 部门
         /// </summary>
-        [ColumnNotNull(ErrorMessage = "部门不能为空")]
+        [ColumnNotNull(ErrorMessage = "第{row}行数据:部门不能为空")]
         [ExcelColumn(ColOrder = 1, ColName = "部门")]
         public string Department { get; set; }
 
