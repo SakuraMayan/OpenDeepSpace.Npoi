@@ -18,10 +18,16 @@ namespace OpenDeepSpace.Npoi
 			
 		}
 
-		public NpoiException(string message) : base(message) { }
+		public string Message { get; set; }
+
+		public int ExceptionCode { get; set; }
+
+		public NpoiException(string message) : base(message) { Message = message; }
+		public NpoiException(int code,string message) : base(message) { Message = message;ExceptionCode = code; }
 
 
-		public NpoiException(string message, Exception innerException) : base(message, innerException) { }
+		public NpoiException(string message, Exception innerException) : base(message, innerException) { Message = message; }
+		public NpoiException(int code,string message, Exception innerException) : base(message, innerException) { Message = message; ExceptionCode = code; }
 
 
 		public NpoiException(Exception innerException)

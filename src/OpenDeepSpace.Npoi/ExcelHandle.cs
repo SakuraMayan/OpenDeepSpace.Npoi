@@ -1217,7 +1217,7 @@ namespace OpenDeepSpace.Npoi
 				//调用数据验证
 				var dataValidationResult = (dataValidationAttr as DataValidationAttribute).IsValid(data);
 				if (dataValidationResult != null)
-					throw new NpoiException(rowIndex==-1?dataValidationResult.ErrorMessage:dataValidationResult.ErrorMessage.Replace("{row}",$"{rowIndex}"));
+					throw new NpoiException(NpoiExceptionCode.DataException,rowIndex==-1?dataValidationResult.ErrorMessage:dataValidationResult.ErrorMessage.Replace("{row}",$"{rowIndex}"));
 			}
 			
         }
@@ -1877,7 +1877,7 @@ namespace OpenDeepSpace.Npoi
 			ecColumns.Sort();
 
 			if (colIndentifierRow == null)
-				throw new NpoiException("列标识行为空");
+				throw new NpoiException(NpoiExceptionCode.ColumnNameException,"列标识行为空");
 
 			foreach (ICell cell in colIndentifierRow)
 			{//遍历excel文件中的标题行
@@ -1902,11 +1902,11 @@ namespace OpenDeepSpace.Npoi
 			{ 
 				var loseColumns = ecColumns.Where(t=>maps.Values.All(a=>a!=t));
 
-				throw new NpoiException($"Excel文件中缺少列名:{string.Join(",",loseColumns.Select(t=>t.ColName))}");
+				throw new NpoiException(NpoiExceptionCode.ColumnNameException,$"Excel文件中缺少列名:{string.Join(",",loseColumns.Select(t=>t.ColName))}");
 			}
 
 			if(maps.Count==0)
-				throw new NpoiException("读取列标识错误，请检查列标识开始行的位置");
+				throw new NpoiException(NpoiExceptionCode.ColumnNameException,"读取列标识错误，请检查列标识开始行的位置");
 
 			return maps;
 		}

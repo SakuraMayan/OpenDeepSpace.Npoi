@@ -521,8 +521,17 @@ namespace OpenDeepSpace.Npoi.Demo.Controllers
         [HttpPost]
         public void ExportExcelToObjectByStream(IFormFile formFile)
         {
-            ExcelHandle ExcelHandle = new ExcelHandle();
-            var excelDatas = ExcelHandle.exportExcelToObject<EmergencyWorkerInDto>(formFile.OpenReadStream(),IsAutoSkipNullRow:false);
+            try
+            {
+
+                ExcelHandle ExcelHandle = new ExcelHandle();
+                var excelDatas = ExcelHandle.exportExcelToObject<EmergencyWorkerInDto>(formFile.OpenReadStream(), IsAutoSkipNullRow: false);
+            }
+            catch (Exception ex)
+            {
+                var exx = ex as NpoiException;
+                
+            }
         }
 
     }
