@@ -1733,10 +1733,13 @@ namespace OpenDeepSpace.Npoi
 
 				if (dataRow == null)//行数据为空直接跳过
 				{
-					if (IsAutoSkipNullRow)//是自动跳过
-						continue;
-					else//不是自动跳过 判断第一个数据验证
-						DataValidation(colPropertyMaps[0], typeof(T).GetProperty(colPropertyMaps[0].PropertyName).GetValue(obj),rowIndex);
+					if (!IsAutoSkipNullRow)
+					{
+						//不是自动跳过 判断第一个数据验证
+						DataValidation(colPropertyMaps[0], typeof(T).GetProperty(colPropertyMaps[0].PropertyName).GetValue(obj), rowIndex);
+					}
+
+					continue;
 				
 				}
 
@@ -1773,6 +1776,7 @@ namespace OpenDeepSpace.Npoi
 						{ //不自动跳过就数据验证
 							DataValidation(excelColumnProperty,typeof(T).GetProperty(colIndexPropertyName).GetValue(obj),rowIndex);
 						}
+						continue;//跳过
 					}
 
 					CellType cellType = dataCell.CellType;
