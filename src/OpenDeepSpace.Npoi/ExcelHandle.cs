@@ -1,4 +1,5 @@
-﻿using NPOI.HSSF.UserModel;
+﻿using Newtonsoft.Json.Linq;
+using NPOI.HSSF.UserModel;
 using NPOI.OpenXml4Net.Exceptions;
 using NPOI.SS.UserModel;
 using NPOI.SS.Util;
@@ -832,13 +833,234 @@ namespace OpenDeepSpace.Npoi
             return wb;
         }
 
-		/// <summary>
-		/// 
-		/// </summary>
-		/// <param name="objs"></param>
-		/// <param name="colNames"></param>
-		/// <param name="wb"></param>
-		/// <param name="dataType"></param>
+
+        /// <summary>
+        /// 导出json数据到excel
+        /// 形如：[{"ColumnTitles":["姓名","部门"],"SheetName":"第一个sheet名称","Datas":[{"Name":"小李","Department":"管理部"}]},{}]
+		/// 形如：[{"Datas":[{"Name":"小李","Department":"管理部"}]},{}]
+        /// </summary>
+        /// <param name="os"></param>
+        /// <param name="JsonData"></param>
+        public void exportJsonToExcel(Stream os, string JsonData)
+		{ 
+			JArray jArray=Newtonsoft.Json.JsonConvert.DeserializeObject<JArray>(JsonData);
+
+            IWorkbook wb = null;
+
+            if (isXSSF)
+            {
+
+                wb = new XSSFWorkbook();
+
+            }
+            else
+            {
+
+                wb = new HSSFWorkbook();
+            }
+
+            foreach (JObject item in jArray)
+			{
+
+				ISheet sheet = null;
+                //ExcelColumn名称
+                List<ExcelColumn> excelColumns = new List<ExcelColumn>();
+				//检查是否包含SheetName属性
+				if (item.ContainsKey("SheetName"))
+				{//对应sheetName 
+					string SheetName = item["SheetName"].ToString();
+					sheet = wb.CreateSheet(SheetName);
+				}
+				else
+				{
+					sheet = wb.CreateSheet();
+				}
+
+
+				//检查是否包含ColumnTitles属性
+				if (item.ContainsKey("ColumnTitles"))
+				{ //对应ExcelColumn
+
+					if (item["ColumnTitles"] is JArray)
+					{
+					    JArray columnTitles = item["ColumnTitles"] as JArray;
+
+                        int i = 1;
+						foreach (var columnTitle in columnTitles)
+                        {
+                            ExcelColumn excelColumn = new ExcelColumn();
+                            excelColumn.ColOrder = i;
+                            excelColumn.ColName = columnTitle.ToString();
+                            excelColumns.Add(excelColumn);
+                            i++;
+                        }
+
+						//设置列名
+                        SetExcelColumnName(sheet, excelColumns);
+
+
+                    }
+					
+				}
+
+
+				//检查是否包含Datas属性
+				if (item.ContainsKey("Datas"))
+				{//对应动态数据
+
+					//解析数据 数据应该是集合形式的JArray
+					if (item["Datas"] is JArray)
+					{
+						var datas = item["Datas"] as JArray;
+
+						List<Dictionary<int,object>> list= new List<Dictionary<int, object>>();
+						foreach (JObject data in datas)
+						{
+
+							//是否已经设置了ColumnTitles
+							bool IsSetColumnTitles = false;
+
+							//取属性
+							List<JProperty> jproperties = data.Properties().ToList();
+
+                            //如果不包含ColumnTitles  则以数据中的属性名称为列标题 且未设置
+                            if (!item.ContainsKey("ColumnTitles") && !IsSetColumnTitles)
+							{
+								var jpropertyNames = jproperties.Select(t => t.Name.ToString()).ToList();
+								
+								int i = 1;
+								foreach (string colname in jpropertyNames)
+								{
+
+
+									excelColumns.Add(new ExcelColumn()
+									{
+										ColOrder = i,
+										ColName= colname,
+									});
+									i++;
+								}
+
+								SetExcelColumnName(sheet, excelColumns);
+
+							}
+
+							//遍历每一数据属性及其值
+							Dictionary<int,object> dicData= new Dictionary<int, object>();
+							int index = 1;
+							foreach (JProperty jproperty in jproperties)
+							{
+								dicData.Add(index, jproperty.Value.ToString());
+								index++;
+
+							}
+							list.Add(dicData);
+
+						}
+
+						//设置数据
+						setDatas(list, sheet, excelColumns);
+
+					
+					}
+
+				}
+
+
+			}
+
+
+            BufferedStream bos = null;
+            try
+            {
+                bos = new BufferedStream(os);
+                wb.Write(bos);
+
+            }
+            catch (IOException e)
+            {
+
+
+                throw new NpoiException("写入对象到不带模板的流中失败");
+            }
+            finally
+            {
+
+                try
+                {
+
+                    if (bos != null)
+                    {
+                        bos.Close();
+                    }
+                    wb.Close();
+
+                }
+                catch (Exception e)
+                {
+
+
+                }
+            }
+        }
+
+
+        private void SetExcelColumnName(ISheet sheet, List<ExcelColumn> excelColumns)
+        {
+            //创建列标题
+            //创建列名所在行
+            IRow row = sheet.CreateRow(0);
+
+            int startColIndex = 0;
+
+            if (isSetOrder)
+            {
+                row.CreateCell(0).SetCellValue(excelTemplate.getOrderName());
+            }
+
+            foreach (ExcelColumn ec in excelColumns)
+            {
+
+                if (isSetOrder)
+                    startColIndex++;
+
+                //输出列名
+                row.CreateCell(startColIndex).SetCellValue(ec.ColName);
+
+                if (!isSetOrder) startColIndex++;
+            }
+        }
+
+        /// <summary>
+        /// 不带模板的设置数据到单元格
+        /// </summary>
+        /// <param name="objs">对象集合</param>
+        /// <param name="sheet">单元格</param>
+		/// <param name="excelColumns">excel列名</param>
+        private void setDatas(List<Dictionary<int,object>> objs, ISheet sheet, List<ExcelColumn> excelColumns)
+        {
+            IRow row = null;
+
+            
+
+            //写数据
+            for (int i = 0; i < objs.Count; i++)
+            {
+
+                row = FillRowData(sheet, excelColumns, i, objs[i]);
+
+            }
+
+
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="objs"></param>
+        /// <param name="colNames"></param>
+        /// <param name="wb"></param>
+        /// <param name="dataType"></param>
         private void RecursionFill(List<dynamic> objs, List<string> colNames, IWorkbook wb, Type dataType)
         {
 
@@ -946,6 +1168,41 @@ namespace OpenDeepSpace.Npoi
 
         }
 
+        /// <summary>
+        /// 填充行数据
+        /// </summary>
+        /// <param name="sheet"></param>
+        /// <param name="excelColumns"></param>
+        /// <param name="i"></param>
+		/// <param name="dataDic"></param>
+        /// <returns></returns>
+        private IRow FillRowData(ISheet sheet, List<ExcelColumn> excelColumns, int i, Dictionary<int,object> dataDic)
+        {
+            //创建一行
+            IRow row = sheet.CreateRow(i + 1);
+            if (isSetOrder)
+            {//设置了序号列，每次每行的第一列设置序号
+
+                row.CreateCell(0).SetCellValue(i + 1);
+            }
+
+            for (int index = 0; index < excelColumns.Count; index++)
+            {
+                //创建列 并填充相应的数据
+                ICell cell = null;
+                if (isSetOrder)
+                    cell = row.CreateCell(index + 1);
+                else
+                    cell = row.CreateCell(index);
+
+
+                object data = dataDic[index+1];//取数据
+
+                dataInputCell(cell, data.GetType(), data, excelColumns[index]);
+            }
+
+            return row;
+        }
 
 
         private List<ExcelColumn> GetDataExcelColumn(List<string> colNames,Type dataType)

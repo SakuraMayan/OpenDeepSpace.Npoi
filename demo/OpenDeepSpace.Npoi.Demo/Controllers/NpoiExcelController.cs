@@ -534,5 +534,21 @@ namespace OpenDeepSpace.Npoi.Demo.Controllers
             }
         }
 
+        /// <summary>
+        ///导出json数据到excel并返回流文件供下载
+        /// </summary>
+        /// <returns></returns>
+        [HttpPost]
+        public async Task<FileResult> ExportJsonToExcel(string JsonData)
+        {
+            NpoiMemoryStream npoiMemoryStream = new NpoiMemoryStream();
+
+            ExcelHandle excelHandle=new ExcelHandle();
+            excelHandle.exportJsonToExcel(npoiMemoryStream,JsonData);
+            npoiMemoryStream.Seek(0, SeekOrigin.Begin);
+
+            return File(npoiMemoryStream, "application/stream", $"{Guid.NewGuid()}.xlsx");
+        }
+
     }
 }
