@@ -836,7 +836,7 @@ namespace OpenDeepSpace.Npoi
 
         /// <summary>
         /// 导出json数据到excel
-        /// 形如：[{"ColumnTitles":["姓名","部门"],"SheetName":"第一个sheet名称","Datas":[{"Name":"小李","Department":"管理部"}]},{}]
+        /// 形如：[{"ColumnTitles":["姓名","部门"],"SheetName":"第一个sheet名称","Datas":[{"Name":"小李","Department":"管理部"}],"IsOrder":true},{}]
 		/// 形如：[{"Datas":[{"Name":"小李","Department":"管理部"}]},{}]
         /// </summary>
         /// <param name="os"></param>
@@ -865,6 +865,13 @@ namespace OpenDeepSpace.Npoi
 				ISheet sheet = null;
                 //ExcelColumn名称
                 List<ExcelColumn> excelColumns = new List<ExcelColumn>();
+
+				//检查是否包含IsOrder
+				if (item.ContainsKey("IsOrder"))
+				{//是否排序 
+				   isSetOrder = (bool)item["IsOrder"];
+				}
+
 				//检查是否包含SheetName属性
 				if (item.ContainsKey("SheetName"))
 				{//对应sheetName 
